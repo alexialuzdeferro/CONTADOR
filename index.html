@@ -1,72 +1,214 @@
-<!-- Contador de Acessos -->
-<div id="view-counter" style="
-    position: fixed;
-    bottom: 15px;
-    right: 15px;
-    background: rgba(0,0,0,0.85);
-    color: white;
-    font-size: 12px;
-    font-family: Arial, sans-serif;
-    padding: 6px 12px;
-    border-radius: 20px;
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-">
-    👁 Visitas: <span id="view-count">0</span>
-</div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contador de Acessos</title>
+    <style>
+        /* Tela preta */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Contador discreto no canto inferior direito */
+        #view-counter {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            font-family: 'Arial', sans-serif;
+            padding: 6px 12px;
+            border-radius: 16px;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            opacity: 0.7;
+            cursor: default;
+            user-select: none;
+        }
+        
+        #view-counter:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.12);
+        }
+        
+        .counter-icon {
+            width: 12px;
+            height: 12px;
+            opacity: 0.6;
+        }
+        
+        .counter-number {
+            font-weight: 500;
+            color: #fff;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Status quase invisível */
+        .status-indicator {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            margin-left: 4px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .status-indicator.online {
+            background: rgba(74, 222, 128, 0.6);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Tela completamente preta -->
+    
+    <!-- Contador de Acessos (apenas isso na tela) -->
+    <div id="view-counter" title="Contador de visitas">
+        <svg class="counter-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+        </svg>
+        <span class="counter-number" id="view-count">0</span>
+        <div class="status-indicator" id="status-indicator"></div>
+    </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(async function() {
-    // Config
-    const supabase = window.supabase.createClient(
-        'https://qgnprifuachmfxoaalax.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnbnByaWZ1YWNobWZ4b2FhbGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MTEzNjcsImV4cCI6MjA1MTA4NzM2N30.sDs7irvIojHudJWKrJmIyQ_c5W3QPwpZbYHyDslNEK2C3ZFRJF8NlApSAZnEsKwnRenj6RFg8zCY/u7oaRjOITgqAnYDFWy4ctkChOuLPv/AFNformrg=='
-    );
-    const PAGE_NAME = 'Project1';
-    
-    // Evitar contar múltiplas vezes na mesma sessão
-    if (sessionStorage.getItem('view_counted')) {
-        // Apenas mostrar o valor atual
-        const { data } = await supabase
-            .from('page_views')
-            .select('view_count')
-            .eq('page_name', PAGE_NAME)
-            .single();
+    <!-- Script do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script>
+        // Configuração do Supabase
+        const SUPABASE_URL = 'https://qgnprifuachmfxoaalax.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnbnByaWZ1YWNobWZ4b2FhbGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzODU5MDcsImV4cCI6MjA4MDk2MTkwN30.sKSYFhcI-zflr9RUKXpWF0_5sc6foDG7yxdEirtE0W4';
+        const PAGE_NAME = 'contador_simples';
         
-        if (data) document.getElementById('view-count').textContent = data.view_count;
-        return;
-    }
-    
-    try {
+        // Elementos
+        const countEl = document.getElementById('view-count');
+        const statusEl = document.getElementById('status-indicator');
+        
+        // Inicializar
+        async function initCounter() {
+            try {
+                // Criar cliente Supabase
+                const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                
+                // Verificar se já contamos nesta sessão
+                const sessionKey = `view_counted_${PAGE_NAME}`;
+                const alreadyCounted = sessionStorage.getItem(sessionKey);
+                
+                if (alreadyCounted) {
+                    // Apenas mostrar valor atual
+                    await fetchCount(supabase);
+                    statusEl.classList.add('online');
+                } else {
+                    // Incrementar contador
+                    await incrementCount(supabase);
+                    sessionStorage.setItem(sessionKey, 'true');
+                    statusEl.classList.add('online');
+                }
+                
+            } catch (error) {
+                // Modo offline - usar localStorage
+                useLocalCounter();
+                console.log('Modo offline ativado');
+            }
+        }
+        
+        // Buscar contagem atual
+        async function fetchCount(supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('page_views')
+                    .select('view_count')
+                    .eq('page_name', PAGE_NAME)
+                    .single();
+                
+                if (!error && data) {
+                    countEl.textContent = data.view_count;
+                }
+            } catch (error) {
+                useLocalCounter();
+            }
+        }
+        
         // Incrementar contador
-        const { data: current } = await supabase
-            .from('page_views')
-            .select('view_count')
-            .eq('page_name', PAGE_NAME)
-            .single();
+        async function incrementCount(supabase) {
+            try {
+                // Tentar buscar registro existente
+                const { data, error } = await supabase
+                    .from('page_views')
+                    .select('view_count')
+                    .eq('page_name', PAGE_NAME)
+                    .single();
+                
+                let newCount;
+                
+                if (error && error.code === 'PGRST116') {
+                    // Criar novo registro
+                    newCount = 1;
+                    await supabase
+                        .from('page_views')
+                        .insert([{
+                            page_name: PAGE_NAME,
+                            view_count: newCount
+                        }]);
+                } else if (error) {
+                    throw error;
+                } else {
+                    // Incrementar existente
+                    newCount = data.view_count + 1;
+                    await supabase
+                        .from('page_views')
+                        .update({
+                            view_count: newCount,
+                            last_updated: new Date().toISOString()
+                        })
+                        .eq('page_name', PAGE_NAME);
+                }
+                
+                countEl.textContent = newCount;
+                
+                // Animação sutil
+                countEl.style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    countEl.style.transform = 'scale(1)';
+                    countEl.style.transition = 'transform 0.2s ease';
+                }, 150);
+                
+            } catch (error) {
+                useLocalCounter();
+            }
+        }
         
-        const newCount = (current?.view_count || 0) + 1;
+        // Fallback para localStorage
+        function useLocalCounter() {
+            let localCount = localStorage.getItem('local_views') || 0;
+            localCount = parseInt(localCount) + 1;
+            localStorage.setItem('local_views', localCount);
+            
+            countEl.textContent = localCount;
+            countEl.style.opacity = '0.8';
+            statusEl.style.background = 'rgba(251, 191, 36, 0.6)';
+        }
         
-        await supabase
-            .from('page_views')
-            .upsert({
-                page_name: PAGE_NAME,
-                view_count: newCount,
-                last_updated: new Date().toISOString()
-            }, {
-                onConflict: 'page_name'
-            });
-        
-        document.getElementById('view-count').textContent = newCount;
-        sessionStorage.setItem('view_counted', 'true');
-        
-    } catch (error) {
-        console.error('Erro no contador:', error);
-        document.getElementById('view-count').textContent = '!';
-    }
-})();
-</script>
+        // Iniciar quando a página carregar
+        document.addEventListener('DOMContentLoaded', initCounter);
+    </script>
+</body>
+</html>
